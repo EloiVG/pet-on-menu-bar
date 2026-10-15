@@ -10,37 +10,22 @@ import sys
 import platform
 import psutil
 import datetime
-
 stats_sistema = "CPU: 0% | Memoria: 0%"
 estado_texto = "Estado: Feliz"
+esta_feliz = True
+pomodoro_restante = 0
 stop_event = threading.Event()
-def tomar_decision(icon, item):
-    global estado_texto
-    decision = random.choice(["¡Hora de jugar!", "¡Hora de comer!", "¡Hora de dormir!"])
-    estado_texto = f"Estado: {decision}"
-    icon.title = f"Mi mascota dice: {decision}"
-def ejecutar_descanso(icon):
-    global estado_texto
-    tiempo_descanso = 5 * 60
-    while tiempo_descanso > 0:
-        minutos, segundos = divmod(tiempo_descanso, 60)
-        estado_texto = f"Estado: Descanso en progreso - {minutos:02d}:{segundos:02d}"
-        icon.title = f"Descanso - {minutos:02d}:{segundos:02d}"
-        time.sleep(1)
-        tiempo_descanso -= 1
-    if not stop_event.is_set():
-        with open("descanso_completado.txt", "a") as f:
-            f.write(f"¡Descanso completado! - {datetime.datetime.now()}\n")
-        estado_texto = "Estado: Descanso completado"
-        icon.title = "Descanso terminado"
-        actualizar_menu(icon)
-def mostrar_hora_actual(icon):
-    global estado_texto
-    while not stop_event.is_set():
-        hora_actual = datetime.datetime.now().strftime("%H:%M:%S")
-        estado_texto = f"Estado: Hora actual - {hora_actual}"
-        icon.title = f"Hora actual - {hora_actual}"
-        time.sleep(1)
+PERSONAJES = {
+    "Kirby": {
+        "frases": [
+            "¡Poyo!",
+            "Tengo un hambre voraz, ¡a comer!",
+            "Hora de dormir, ¡buenas noches!",
+            "¡Estoy lleno de energía!",
+        ]
+    }
+}
+personaje_actual = "Kirby"
 def configurar_inicio_automatico():
     if platform.system() == "Windows":
         import winreg
@@ -73,22 +58,15 @@ configurar_inicio_automatico()
 def monitorizar_sistema(icon):
     global stats_sistema
     while not stop_event.is_set():
-        cpu_percent = psutil.cpu_percent(interval=1)
-        memoria = psutil.virtual_memory()
-        stats_sistema = f"CPU: {cpu_percent}% | Memoria: {memoria.percent}%"
-        time.sleep(3)
-    
-PERSONAJES = {
-    "Kirby": {
-        "frases": [
-            "¡Poyo!",
-            "Tengo un hambre voraz, ¡a comer!",
-            "Hora de dormir, ¡buenas noches!",
-            "¡Estoy lleno de energía!",
-        ]
-    }
-}
-personaje_actual = "Kirby"
+        cpu = psutil.cpu_percent(interval=1)
+        memoria = psutil.virtual_memory().percent
+        stats_sistema = f"CPU: {cpu}% | Memoria: {memoria}%"
+        if pomodoro_restante > 0:
+            minutos, segundos = divmod(pomodoro_restante, 60)
+            stats_sistema += f" | Pomodoro: {minutos:02d}:{segundos:02d}"
+        else:
+            icon.title = stats_sistema
+        time.sleep(2)
 
 def generar_imagen(color_fondo):
     image = Image.new('RGB', (64, 64), color=(color_fondo))
@@ -102,7 +80,7 @@ def cargar_imagenes():
         return generar_imagen((0, 255, 0)), generar_imagen((0, 0, 255))  # Verde para feliz, Azul para cansado
 imagen_feliz, imagen_cansado = cargar_imagenes()
 estado_texto = "Estado: Feliz"
-def cambiar_icono(icon, item):
+def cambiar_icono(icon, _):
     global estado_texto, esta_feliz
     esta_feliz = not esta_feliz
     if esta_feliz:
@@ -113,24 +91,19 @@ def cambiar_icono(icon, item):
         icon.icon = imagen_cansado
         icon.title = "Mi mascota (Cansado)"
         estado_texto = "Estado: Cansado"
-    icon.menu = pystray.Menu(
-        item(estado_texto, lambda: None),
-        item('Cambiar icono', cambiar_icono),
-        item('Salir', salir)
-    )
-def despertar(icon, item):
+def despertar(icon, _):
     global estado_texto, esta_feliz
     esta_feliz = True
     icon.icon = imagen_feliz
     icon.title = "Mi mascota (Muy feliz)"
     estado_texto = "Estado: energia al 100%"
-def dar_de_comer(icon, item):
+def dar_de_comer(icon, _):
     global estado_texto, esta_feliz
     esta_feliz = True
     icon.icon = imagen_feliz
     icon.title = "mi mascota (ñam ñam)"
     estado_texto = "estado: ¡Alimentado y feliz"
-def dormir(icon, item):
+def dormir(icon, _):
     global estado_texto, esta_feliz
     esta_feliz = False
     icon.icon = imagen_cansado
@@ -151,31 +124,43 @@ def ejecutar_cuenta_atras(icon):
             f.write(f"¡Pomodoro completado! - {datetime.datetime.now()}\n")
         estado_texto = "Estado: Pomodoro completado"
         icon.title = "Pomodoro terminado"
-        actualizar_menu(icon)
     estado_texto = "Estado: Pomodoro completado"
     icon.title = "Pomodoro terminado"
-def iniciar_pomodoro(icon, item):
+def iniciar_pomodoro(icon, _):
     global estado_texto
     estado_texto = "Estado: Pomodoro iniciado..."
     threading.Thread(target=ejecutar_cuenta_atras, args=(icon,), daemon=True).start()
-def salir(icon, item):
+def salir(icon, _):
     stop_event.set()
     icon.stop()
-def decir_frase_aleatoria(icon):
+def dar_mimo(icon, _):
+    global esta_feliz
+    esta_feliz = True
+    icon.icon = imagen_feliz
+    icon.title = "Mi mascota (Feliz)"
+    estado_texto = "Estado: Feliz"
+def decir_frase_aleatoria(icon, _):
     frase_elegida = random.choice(PERSONAJES[personaje_actual]["frases"])
     script = f'display notification "{frase_elegida}" with title "Mi mascota dice:"'
     subprocess.run(["osascript", "-e", script])
+
 menu = pystray.Menu(
-item(lambda item: f"{stats_sistema}", lambda: None),
-item(lambda item: estado_texto, lambda: None),
-item('Cambiar icono', cambiar_icono),
-item('Dar un mimo', despertar),
-item('Dormir', dormir),
-item('Dar de comer', dar_de_comer),
-item('Iniciar Pomodoro (25m)', iniciar_pomodoro),
-item('Decir frase', decir_frase_aleatoria),
-item('Salir', salir),
-item('Descanso (5m)', ejecutar_descanso)
+    item(lambda _: stats_sistema, None, enabled=False),
+    item(lambda _: estado_texto, None, enabled=False),
+    pystray.Menu.SEPARATOR,
+    item("Cambiar icono", cambiar_icono),
+    item("Dormir", dormir),
+    item("Dar mimo", dar_mimo),
+    item("Dar de comer", dar_de_comer),
+    pystray.Menu.SEPARATOR,
+    item("Decir frase aleatoria", decir_frase_aleatoria),
+    item("Iniciar Pomodoro", iniciar_pomodoro),
+    pystray.Menu.SEPARATOR,
+    item("Salir", salir)
 )
-icon = pystray.Icon("name", imagen_feliz, "Mi mascota", menu)
-icon.run()
+icon = pystray.Icon("MiMascota", imagen_feliz, "Mi Mascota", menu)
+def preparar_icono(icon):
+    icon.visible = True
+    threading.Thread(target=monitorizar_sistema, args=(icon,), daemon=True).start()
+
+icon.run(preparar_icono)

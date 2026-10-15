@@ -10,6 +10,112 @@ import sys
 import platform
 import psutil
 import datetime
+TEXTOS = {
+    "es": {
+        "estado_feliz": "Estado: Feliz",
+        "estado_cansado": "Estado: Cansado",
+        "estado_durmiendo": "Estado: Durmiendo (Zzz)",
+        "estado_alimentado": "Estado: ¡Alimentado y feliz!",
+        "estado_pomodoro_iniciado": "Estado: Pomodoro iniciado...",
+        "estado_pomodoro_completado": "Estado: Pomodoro completado",
+        "estado_energia": "Estado: ¡Energía al 100%!",
+        "estado_ñam": "Estado: ¡Ñam ñam!",
+        "estado_durmiendo_zzz": "Estado: Zzz... Durmiendo",
+        "estado_pomodoro_en_progreso": "Estado: Pomodoro en progreso - {minutos:02d}:{segundos:02d}",
+        "idioma_cambiado": "Idioma cambiado a {idioma}",
+        "salir": "Salir",
+        "cambiar_icono": "Cambiar icono",
+        "dormir": "Dormir",
+        "dar_mimo": "Dar mimo",
+        "dar_de_comer": "Dar de comer",
+        "decir_frase_aleatoria": "Decir frase aleatoria",
+        "iniciar_pomodoro": "Iniciar Pomodoro",
+        "idiomas": "Idiomas",
+},
+    "en": {
+        "estado_feliz": "State: Happy",
+        "estado_cansado": "State: Tired",
+        "estado_durmiendo": "State: Sleeping (Zzz)",
+        "estado_alimentado": "State: Fed and happy!",
+        "estado_pomodoro_iniciado": "State: Pomodoro started...",
+        "estado_pomodoro_completado": "State: Pomodoro completed",
+        "estado_energia": "State: Energy at 100%!",
+        "estado_ñam": "State: Yum yum!",
+        "estado_durmiendo_zzz": "State: Zzz... Sleeping",
+        "estado_pomodoro_en_progreso": "State: Pomodoro in progress - {minutos:02d}:{segundos:02d}",
+        "idioma_cambiado": "Language changed to {idioma}",
+        "salir": "Exit",
+        "cambiar_icono": "Change icon",
+        "dormir": "Sleep",
+        "dar_mimo": "Give a cuddle",
+        "dar_de_comer": "Feed",
+        "decir_frase_aleatoria": "Say a random phrase",
+        "iniciar_pomodoro": "Start Pomodoro",
+        "idiomas": "Languages",
+    },
+    "cat": {
+        "estado_feliz": "Estat: Feliç",
+        "estado_cansado": "Estat: Cansat",
+        "estado_durmiendo": "Estat: Dormint (Zzz)",
+        "estado_alimentado": "Estat: Alimentat i feliç!",
+        "estado_pomodoro_iniciado": "Estat: Pomodoro iniciat...",
+        "estado_pomodoro_completado": "Estat: Pomodoro completat",
+        "estado_energia": "Estat: Energia al 100%!",
+        "estado_ñam": "Estat: Ñam ñam!",
+        "estado_durmiendo_zzz": "Estat: Zzz... Dormint",
+        "estado_pomodoro_en_progreso": "Estat: Pomodoro en progrés - {minuts:02d}:{segons:02d}",
+        "idioma_cambiado": "Idioma canviat a {idioma}",
+        "salir": "Sortir",
+        "cambiar_icono": "Canviar icona",
+        "dormir": "Dormir",
+        "dar_mimo": "Donar una abraçada",
+        "dar_de_comer": "Donar menjar",
+        "decir_frase_aleatoria": "Dir una frase aleatòria",
+        "iniciar_pomodoro": "Iniciar Pomodoro",
+        "idiomas": "Idiomes",
+    },
+    "de": {
+        "estado_feliz": "Zustand: Glücklich",
+        "estado_cansado": "Zustand: Müde",
+        "estado_durmiendo": "Zustand: Schlafend (Zzz)",
+        "estado_alimentado": "Zustand: Gefüttert und glücklich!",
+        "estado_pomodoro_iniciado": "Zustand: Pomodoro gestartet...",
+        "estado_pomodoro_completado": "Zustand: Pomodoro abgeschlossen",
+        "estado_energia": "Zustand: Energie bei 100%!",
+        "estado_ñam": "Zustand: Lecker lecker!",
+        "estado_durmiendo_zzz": "Zustand: Zzz... Schlaf en",
+        "estado_pomodoro_en_progreso": "Zustand: Pomodoro läuft - {minuten:02d}:{sekunden:02d}",
+        "idioma_cambiado": "Sprache geändert zu {idioma}",
+        "salir": "Beenden",
+        "cambiar_icono": "Symbol ändern",
+        "dormir": "Schlafen",
+        "dar_mimo": "Kuscheln", 
+        "dar_de_comer": "Füttern",
+        "decir_frase_aleatoria": "Zufälligen Satz sagen",
+        "iniciar_pomodoro": "Pomodoro starten",
+        "idiomas": "Sprachen",
+    }
+}
+idioma_actual = "es"
+
+def t(clave):
+    return TEXTOS[idioma_actual][clave]
+
+def cambiar_idioma(codigo):
+    def _cambiar(icon, _):
+        global idioma_actual
+        idioma_actual = codigo
+        icon.update_menu()
+    return _cambiar
+
+def menu_idiomas():
+    return pystray.Menu(
+        item("Español", cambiar_idioma("es"), radio=True, checked=lambda item: idioma_actual == "es"),
+        item("English", cambiar_idioma("en"), radio=True, checked=lambda item: idioma_actual == "en"),
+        item("Català", cambiar_idioma("cat"), radio=True, checked=lambda item: idioma_actual == "cat"),
+        item("Deutsch", cambiar_idioma("de"), radio=True, checked=lambda item: idioma_actual == "de")
+    )
+
 stats_sistema = "CPU: 0% | Memoria: 0%"
 estado_texto = "Estado: Feliz"
 esta_feliz = True
@@ -155,6 +261,8 @@ menu = pystray.Menu(
     pystray.Menu.SEPARATOR,
     item("Decir frase aleatoria", decir_frase_aleatoria),
     item("Iniciar Pomodoro", iniciar_pomodoro),
+    pystray.Menu.SEPARATOR,
+    item("Idiomas", menu_idiomas()),
     pystray.Menu.SEPARATOR,
     item("Salir", salir)
 )

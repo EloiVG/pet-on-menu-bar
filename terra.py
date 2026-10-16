@@ -13,6 +13,11 @@ import datetime
 import feedparser
 from deep_translator import GoogleTranslator
 import json
+try:
+    from AppKit import NSApplication, NSApplicationActivationPolicyAccessory
+    NSApplication.sharedApplication().setActivationPolicy_(NSApplicationActivationPolicyAccessory)
+except ImportError:
+    pass
 
 FEED_NINTENDO = "https://www.nintenderos.com/feed/"
 IDIOMA_NOTICIAS = "es"  # Cambia esto a "en" para inglés, "cat" para catalán, "de" para alemán
@@ -40,6 +45,9 @@ TEXTOS = {
         "decir_frase_aleatoria": "Decir frase aleatoria",
         "iniciar_pomodoro": "Iniciar Pomodoro",
         "idiomas": "Idiomas",
+        "buscar_noticias": "Buscar noticias de Nintendo",
+        "nueva_noticia": "Nueva noticia de Nintendo",
+        "no_hay_noticias": "No hay nuevas noticias"
 },
     "en": {
         "estado_feliz": "State: Happy",
@@ -61,6 +69,9 @@ TEXTOS = {
         "decir_frase_aleatoria": "Say a random phrase",
         "iniciar_pomodoro": "Start Pomodoro",
         "idiomas": "Languages",
+        "buscar_noticias": "Search for Nintendo news",
+        "nueva_noticia": "New Nintendo news",
+        "no_hay_noticias": "No new news"
     },
     "cat": {
         "estado_feliz": "Estat: Feliç",
@@ -82,6 +93,9 @@ TEXTOS = {
         "decir_frase_aleatoria": "Dir una frase aleatòria",
         "iniciar_pomodoro": "Iniciar Pomodoro",
         "idiomas": "Idiomes",
+        "buscar_noticias": "Buscar notícies de Nintendo",
+        "nueva_noticia": "Nova notícia de Nintendo",
+        "no_hay_noticias": "No hi ha notícies noves"
     },
     "de": {
         "estado_feliz": "Zustand: Glücklich",
@@ -103,6 +117,9 @@ TEXTOS = {
         "decir_frase_aleatoria": "Zufälligen Satz sagen",
         "iniciar_pomodoro": "Pomodoro starten",
         "idiomas": "Sprachen",
+        "buscar_noticias": "Nach Nintendo-News suchen",
+        "nueva_noticia": "Neue Nintendo-Nachrint",
+        "no_hay_noticias": "Keine neuen Nachrichten"
     }
 }
 idioma_actual = "es"
@@ -117,6 +134,15 @@ def cambiar_idioma(codigo):
         icon.update_menu()
     return _cambiar
 
+def revision_automatica():
+    while not stop_event.is_set():
+        nuevas_noticias = verificar_nuevas_noticias()
+        if platform.system() == "Darwin":
+                for noticia in nuevas_noticias:
+                    titulo = traducir_titulo(noticia.title)
+                    subprocess.run(["osascript", "-e", f'display notification "{titulo}" with title "Nueva noticia de Nintendo"'])
+                    time.sleep(2)
+        stop_event.wait(1800)
 def menu_idiomas():
     return pystray.Menu(
         item("Español", cambiar_idioma("es"), radio=True, checked=lambda item: idioma_actual == "es"),
@@ -136,7 +162,6 @@ PERSONAJES = {
     }
 }
 personaje_actual = "Kirby"
-ARCHIVO_NOTICIAS = "noticias_vistas.json"
 
 def cargar_noticias_vistas():
     if not os.path.exists(ARCHIVO_NOTICIAS):
@@ -201,6 +226,13 @@ def configurar_inicio_automatico():
 
 configurar_inicio_automatico()
 
+def traducir_titulo(titulo):
+    codigos = {"es":"es", "en":"en", "cat": "ca", "de": "de"}
+    try:
+        return GoogleTranslator(source="auto", target=codigos[idioma_actual]).translate(titulo)
+    except Exception as e:
+        print("Error al traducir:", e)
+        return titulo
 def generar_imagen_por_defecto():
     image = Image.new('RGB', (64, 64), color=(0, 255, 0))  # Verde por defecto
     dc = ImageDraw.Draw(image)
@@ -209,9 +241,18 @@ def generar_imagen_por_defecto():
 
 def cargar_imagenes():
     try:
-        return Image.open("pet_feliz.png"), Image.open("pet_cansado.png")
+        return hacer_blanca(Image.open("pet_feliz.png")), hacer_blanca(Image.open("pet_cansado.png"))
     except FileNotFoundError:
         return generar_imagen_por_defecto(), generar_imagen_por_defecto()  # Verde para feliz, Azul para cansado
+
+def hacer_blanca(imagen):
+    imagen = imagen.convert("RGBA")
+    imagen = imagen.resize((200, 200), Image.LANCZOS)
+    lienzo = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    lienzo.paste(imagen, (28, 28), imagen)
+    blanca = Image.new("RGBA", imagen.size, (255, 255, 255, 0))
+    blanca.putalpha(imagen.getchannel("A"))
+    return blanca
 
 def salir(icon, _):
     stop_event.set()
@@ -221,27 +262,29 @@ imagen_feliz, imagen_cansado = cargar_imagenes()
 
 def forzar_revision_noticias(icon, _):
     nuevas_noticias = verificar_nuevas_noticias()
-    if nuevas_noticias:
-        for noticia in nuevas_noticias:
-            print(f"Nueva noticia: {noticia.title}")
-            if platform.system() == "Darwin":
-                subprocess.run(["osascript", "-e", f'display notification "{noticia.title}" with title "Nueva noticia de Nintendo"'])
-                time.sleep(2)
-    else:
-        print("No hay nuevas noticias.")
-        if platform.system() == "Darwin":
-            script = f'display notification "No hay nuevas noticias." with title "Nintendo News Center"'
-            subprocess.run(["osascript", "-e", script])
+    if platform.system == "Darwin":
+        if nuevas_noticias:
+            for noticia in nuevas_noticias:
+                titulo = traducir_titulo(noticia.title)
+                subprocess.run(["osascript", "-e", f'display notification "{titulo}" with title "{t("nueva_noticia")}"'])
+                time.sleep(4)
+
+            else:
+                subprocess.run(["osascript", "-e", f'display notification "{t("no_hay_noticias")}" with title "Nintendo News Center"'])
+
             
 menu = pystray.Menu(
-    item("Buscar noticias de Nintendo", forzar_revision_noticias),
+    item(lambda _: t("buscar_noticias"), forzar_revision_noticias),
     pystray.Menu.SEPARATOR,
-    item("Salir", salir)
+    item(lambda _: t("idiomas"), menu_idiomas()),
+    pystray.Menu.SEPARATOR,
+    item(lambda _: t("salir"), salir)
 )
 
 icon = pystray.Icon("NintendoNews", imagen_feliz, "Nintendo News Center", menu)
 
 def preparar_icono(icon):
     icon.visible = True
+    threading.Thread(target=revision_automatica, daemon=True).start()
 
 icon.run(preparar_icono)

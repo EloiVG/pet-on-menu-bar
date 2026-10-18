@@ -1,0 +1,57 @@
+# Nintendo News Center 🎮
+
+A macOS menu bar app that notifies you about the latest Nintendo news, with notifications translated into Spanish, English, Catalan and German.
+
+## Features
+
+- Menu bar icon with the Switch logo.
+- Automatic news check every 30 minutes (RSS feed from [Nintenderos](https://www.nintenderos.com)).
+- Native macOS notifications with the headline of each news item.
+- Headline translation into 4 languages (es, en, cat, de).
+- Menu with:
+  - Search news now.
+  - Saved news counter.
+  - Clear history.
+  - Open the news website.
+  - Latest news headline.
+  - Language selector.
+  - Keyword filter (for example, "switch 2" or "mario"), with the option to add your own keywords.
+
+## Requirements
+
+- macOS
+- Python 3.10 or newer
+
+## Installation
+
+```bash
+git clone https://github.com/YOUR_USERNAME/pet-on-menu-bar.git
+cd pet-on-menu-bar
+python3 -m venv venv
+source venv/bin/activate
+pip install pystray pillow feedparser deep-translator psutil pyobjc
+python terra.py
+```
+
+## Files
+
+- `terra.py`: main program.
+- `pet_feliz.png`, `pet_cansado.png`: icons (optional; a default icon is used if they are missing).
+- `palabras_clave.json`: keywords used to filter news. If the list is empty, all news is shown.
+- `noticias_vistas.json`: history generated automatically.
+
+## Example `palabras_clave.json`
+
+```json
+["switch 2", "mario"]
+```
+
+## Known limitations
+
+- On macOS, the menu text only updates when you open the menu again.
+- Translation uses Google Translate without an API key. If too many requests are sent in a row, it may fail and the original headline is shown.
+- Notifications use `osascript`, so you need to allow them in System Settings.
+
+## Credits
+
+News from [Nintenderos](https://www.nintenderos.com). Personal project, not affiliated with Nintendo.

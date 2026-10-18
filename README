@@ -25,7 +25,7 @@ App de barra de menú (macOS) que te avisa de las últimas noticias de Nintendo,
 ## Instalación
 
 ```bash
-git clone https://github.com/TU_USUARIO/pet-on-menu-bar.git
+git clone https://github.com/EloiVG/pet-on-menu-bar.git
 cd pet-on-menu-bar
 python3 -m venv venv
 source venv/bin/activate
